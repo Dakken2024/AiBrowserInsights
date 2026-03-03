@@ -4,7 +4,7 @@
  */
 
 const CONFIG = {
-  backendUrl: 'http://localhost:8001',
+  backendUrl: 'http://localhost:8002',
   syncInterval: 30,
   maxHistoryItems: 1000
 };

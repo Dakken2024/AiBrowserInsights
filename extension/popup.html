@@ -358,6 +358,43 @@
       border-color: var(--accent-color);
     }
 
+    .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .form-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .model-info {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+    }
+
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: var(--accent-gradient);
+      color: white;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
     .keyword-list {
       display: flex;
       flex-wrap: wrap;
@@ -524,10 +561,57 @@
         </div>
       </div>
       <div class="section">
+        <div class="section-title">🤖 AI 模型配置</div>
+        <div class="form-group">
+          <label class="form-label">选择 AI 模型</label>
+          <select class="form-select" id="modelSelect">
+            <option value="">加载中...</option>
+          </select>
+          <div id="modelInfo" class="model-info hidden"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">选择模型版本</label>
+          <select class="form-select" id="modelVersionSelect">
+            <option value="">请先选择模型</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
         <div class="section-title">🔑 API 配置</div>
         <div class="form-group">
           <label class="form-label">API 密钥</label>
           <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-xxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">API 端点 (可选)</label>
+          <input type="text" class="form-input" id="apiEndpointInput" placeholder="默认使用模型官方端点">
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🎙️ 播客模型配置 (独立)</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-secondary);border-radius:10px;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:500;">使用独立模型</div>
+          <button id="podcastModelToggle" style="width:50px;height:28px;background:var(--bg-primary);border-radius:14px;cursor:pointer;border:2px solid var(--border-color);position:relative;">
+            <div id="podcastToggleSlider" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:white;border-radius:50%;transition:transform 0.3s;display:flex;align-items:center;justify-content:center;font-size:10px;">❌</div>
+          </button>
+        </div>
+        <div id="podcastModelConfig" class="hidden">
+          <div class="form-group">
+            <label class="form-label">播客 AI 模型</label>
+            <select class="form-select" id="podcastModelSelect">
+              <option value="">加载中...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">播客模型版本</label>
+            <select class="form-select" id="podcastModelVersionSelect">
+              <option value="">请先选择模型</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">播客 API 密钥 (可选)</label>
+            <input type="password" class="form-input" id="podcastApiKeyInput" placeholder="留空则使用主 API 密钥">
+          </div>
         </div>
       </div>
       <div class="section">

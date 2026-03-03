@@ -8,9 +8,16 @@ const state = {
   browseHistory: [],
   settings: {
     apiKey: '',
-    apiEndpoint: 'https://dashscope.aliyuncs.com/api/v1',
-    keywords: []
+    apiEndpoint: '',
+    keywords: [],
+    selectedModel: 'qwen',
+    selectedModelVersion: '',
+    usePodcastModel: false,
+    podcastModel: '',
+    podcastModelVersion: '',
+    podcastApiKey: ''
   },
+  availableModels: [],
   analysisResult: null,
   isDarkMode: false,
   isPlaying: false,
@@ -41,10 +48,20 @@ function initElements() {
   elements.themeBtn = document.getElementById('themeBtn');
   elements.refreshBtn = document.getElementById('refreshBtn');
   elements.apiKeyInput = document.getElementById('apiKeyInput');
+  elements.apiEndpointInput = document.getElementById('apiEndpointInput');
   elements.keywordInput = document.getElementById('keywordInput');
   elements.keywordList = document.getElementById('keywordList');
   elements.progressBar = document.getElementById('progressBar');
   elements.playBtn = document.getElementById('playBtn');
+  elements.modelSelect = document.getElementById('modelSelect');
+  elements.modelVersionSelect = document.getElementById('modelVersionSelect');
+  elements.modelInfo = document.getElementById('modelInfo');
+  elements.podcastModelToggle = document.getElementById('podcastModelToggle');
+  elements.podcastToggleSlider = document.getElementById('podcastToggleSlider');
+  elements.podcastModelConfig = document.getElementById('podcastModelConfig');
+  elements.podcastModelSelect = document.getElementById('podcastModelSelect');
+  elements.podcastModelVersionSelect = document.getElementById('podcastModelVersionSelect');
+  elements.podcastApiKeyInput = document.getElementById('podcastApiKeyInput');
 }
 
 // 初始化事件监听器
@@ -78,6 +95,13 @@ function initEventListeners() {
     state.progress = Math.min(100, state.progress + 10);
     updateProgress();
   });
+
+  // 模型选择
+  elements.modelSelect.addEventListener('change', onModelChange);
+  elements.modelVersionSelect.addEventListener('change', onModelVersionChange);
+  elements.podcastModelToggle.addEventListener('click', togglePodcastModel);
+  elements.podcastModelSelect.addEventListener('change', onPodcastModelChange);
+  elements.podcastModelVersionSelect.addEventListener('change', onPodcastModelVersionChange);
 
   // 设置
   document.getElementById('addKeywordBtn').addEventListener('click', addKeyword);
@@ -142,8 +166,10 @@ async function loadData() {
 
     const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
     if (settingsResponse.success) {
-      state.settings = settingsResponse.settings || state.settings;
+      state.settings = { ...state.settings, ...settingsResponse.settings };
       elements.apiKeyInput.value = state.settings.apiKey || '';
+      elements.apiEndpointInput.value = state.settings.apiEndpoint || '';
+      elements.podcastApiKeyInput.value = state.settings.podcastApiKey || '';
       renderKeywords();
     }
 
@@ -152,9 +178,118 @@ async function loadData() {
       state.analysisResult = JSON.parse(savedAnalysis);
       renderAnalysis();
     }
+
+    await loadAvailableModels();
   } catch (error) {
     console.error('加载数据失败:', error);
   }
+}
+
+// 加载可用模型列表
+async function loadAvailableModels() {
+  try {
+    const response = await fetch('http://localhost:8002/api/models');
+    if (response.ok) {
+      const data = await response.json();
+      state.availableModels = data.models || [];
+      renderModelSelects();
+    }
+  } catch (error) {
+    console.error('加载模型列表失败:', error);
+    elements.modelSelect.innerHTML = '<option value="">无法加载模型</option>';
+  }
+}
+
+// 渲染模型选择器
+function renderModelSelects() {
+  const options = state.availableModels.map(model => 
+    `<option value="${model.id}">${model.icon} ${model.name}</option>`
+  ).join('');
+  
+  elements.modelSelect.innerHTML = options || '<option value="">无可用模型</option>';
+  elements.podcastModelSelect.innerHTML = options || '<option value="">无可用模型</option>';
+  
+  if (state.settings.selectedModel) {
+    elements.modelSelect.value = state.settings.selectedModel;
+    onModelChange();
+  }
+  
+  if (state.settings.podcastModel) {
+    elements.podcastModelSelect.value = state.settings.podcastModel;
+    onPodcastModelChange();
+  }
+  
+  if (state.settings.usePodcastModel) {
+    applyPodcastModelToggle();
+  }
+}
+
+// 主模型切换
+function onModelChange() {
+  const modelId = elements.modelSelect.value;
+  state.settings.selectedModel = modelId;
+  
+  const model = state.availableModels.find(m => m.id === modelId);
+  if (model) {
+    elements.modelInfo.innerHTML = `${model.icon} <strong>${model.name}</strong> - ${model.description}`;
+    elements.modelInfo.classList.remove('hidden');
+    
+    const versionOptions = model.models.map(m => 
+      `<option value="${m}" ${m === model.default_model ? 'selected' : ''}>${m}</option>`
+    ).join('');
+    elements.modelVersionSelect.innerHTML = versionOptions;
+    
+    state.settings.selectedModelVersion = model.default_model;
+  } else {
+    elements.modelInfo.classList.add('hidden');
+    elements.modelVersionSelect.innerHTML = '<option value="">请先选择模型</option>';
+  }
+}
+
+// 主模型版本切换
+function onModelVersionChange() {
+  state.settings.selectedModelVersion = elements.modelVersionSelect.value;
+}
+
+// 播客模型独立配置切换
+function togglePodcastModel() {
+  state.settings.usePodcastModel = !state.settings.usePodcastModel;
+  applyPodcastModelToggle();
+}
+
+function applyPodcastModelToggle() {
+  const slider = elements.podcastToggleSlider;
+  if (state.settings.usePodcastModel) {
+    slider.style.transform = 'translateX(22px)';
+    slider.textContent = '✓';
+    elements.podcastModelConfig.classList.remove('hidden');
+  } else {
+    slider.style.transform = 'translateX(0)';
+    slider.textContent = '❌';
+    elements.podcastModelConfig.classList.add('hidden');
+  }
+}
+
+// 播客模型切换
+function onPodcastModelChange() {
+  const modelId = elements.podcastModelSelect.value;
+  state.settings.podcastModel = modelId;
+  
+  const model = state.availableModels.find(m => m.id === modelId);
+  if (model) {
+    const versionOptions = model.models.map(m => 
+      `<option value="${m}" ${m === model.default_model ? 'selected' : ''}>${m}</option>`
+    ).join('');
+    elements.podcastModelVersionSelect.innerHTML = versionOptions;
+    state.settings.podcastModelVersion = model.default_model;
+  } else {
+    elements.podcastModelVersionSelect.innerHTML = '<option value="">请先选择模型</option>';
+  }
+}
+
+// 播客模型版本切换
+function onPodcastModelVersionChange() {
+  state.settings.podcastModelVersion = elements.podcastModelVersionSelect.value;
 }
 
 // 更新统计
@@ -334,7 +469,7 @@ async function generateAnalysis() {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="loading"></span> 分析中...';
-  showToast('正在分析...');
+  showToast(`正在使用 ${state.settings.selectedModel} 分析...`);
 
   try {
     const response = await fetch('http://localhost:8001/api/analyze', {
@@ -344,7 +479,9 @@ async function generateAnalysis() {
         browse_history: state.browseHistory.slice(0, 50),
         keywords: state.settings.keywords || [],
         api_key: state.settings.apiKey,
-        api_endpoint: state.settings.apiEndpoint
+        api_endpoint: state.settings.apiEndpoint || undefined,
+        model_id: state.settings.selectedModel,
+        model_name: state.settings.selectedModelVersion || undefined
       })
     });
 
@@ -354,7 +491,7 @@ async function generateAnalysis() {
     localStorage.setItem('lastAnalysis', JSON.stringify(state.analysisResult));
     
     renderAnalysis();
-    showToast('分析完成');
+    showToast(`分析完成 (使用 ${state.analysisResult.model_used || state.settings.selectedModel})`);
   } catch (error) {
     showToast('分析失败: ' + error.message);
   } finally {
@@ -393,17 +530,31 @@ async function generatePodcast() {
   const btn = document.getElementById('generatePodcastBtn');
   btn.disabled = true;
   btn.textContent = '生成中...';
-  showToast('正在生成播客...');
+  
+  const usePodcastModel = state.settings.usePodcastModel;
+  const modelId = usePodcastModel ? state.settings.podcastModel : state.settings.selectedModel;
+  const modelName = usePodcastModel ? state.settings.podcastModelVersion : state.settings.selectedModelVersion;
+  const apiKey = usePodcastModel ? (state.settings.podcastApiKey || state.settings.apiKey) : state.settings.apiKey;
+  
+  showToast(`正在使用 ${modelId} 生成播客...`);
 
   try {
+    const requestBody = {
+      analysis_result: state.analysisResult,
+      tts_model: 'tts-edge',
+      tts_speed: 1.0
+    };
+    
+    if (usePodcastModel && modelId) {
+      requestBody.model_id = modelId;
+      requestBody.model_name = modelName || undefined;
+      requestBody.api_key = apiKey;
+    }
+
     const response = await fetch('http://localhost:8001/api/generate-podcast', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        analysis_result: state.analysisResult,
-        tts_model: 'tts-edge',
-        tts_speed: 1.0
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) throw new Error('生成失败');
@@ -415,7 +566,7 @@ async function generatePodcast() {
     document.getElementById('scriptContent').textContent = state.podcastScript;
     document.getElementById('podcastScript').classList.remove('hidden');
     
-    showToast('播客已生成');
+    showToast(`播客已生成 (使用 ${modelId})`);
   } catch (error) {
     showToast('生成失败: ' + error.message);
   } finally {
@@ -506,6 +657,8 @@ function renderKeywords() {
 // 保存设置
 async function saveSettings() {
   state.settings.apiKey = elements.apiKeyInput.value;
+  state.settings.apiEndpoint = elements.apiEndpointInput.value;
+  state.settings.podcastApiKey = elements.podcastApiKeyInput.value;
   await sendMessage({ type: 'SAVE_SETTINGS', settings: state.settings });
   showToast('设置已保存');
 }

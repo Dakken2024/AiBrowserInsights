@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import base64
+from ai_models import model_manager
 
 app = FastAPI(
     title="Browser Insights API",
@@ -45,6 +46,8 @@ class AnalysisRequest(BaseModel):
     keywords: List[str] = []
     api_key: str
     api_endpoint: str = "https://dashscope.aliyuncs.com/api/v1"
+    model_id: str = "qwen"
+    model_name: Optional[str] = None
 
 class AnalysisResponse(BaseModel):
     """分析响应模型"""
@@ -53,6 +56,7 @@ class AnalysisResponse(BaseModel):
     detailed_report: str
     categories: Dict[str, int]
     timestamp: str
+    model_used: Optional[str] = None
 
 class PodcastRequest(BaseModel):
     """播客生成请求模型"""
@@ -60,6 +64,9 @@ class PodcastRequest(BaseModel):
     tts_model: str = "tts-edge"
     tts_speed: float = 1.0
     tts_api_key: Optional[str] = None
+    model_id: Optional[str] = None
+    model_name: Optional[str] = None
+    api_key: Optional[str] = None
 
 class PodcastResponse(BaseModel):
     """播客响应模型"""
@@ -162,76 +169,55 @@ async def health_check():
     """健康检查"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.get("/api/models")
+async def get_available_models():
+    """获取所有可用的 AI 模型列表"""
+    return {
+        "models": model_manager.get_available_models(),
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/models/{model_id}")
+async def get_model_info(model_id: str):
+    """获取特定模型的详细信息"""
+    info = model_manager.get_model_info(model_id)
+    if not info:
+        raise HTTPException(status_code=404, detail="模型不存在")
+    return info
+
 @app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_browsing_data(request: AnalysisRequest):
     """
     分析浏览数据
-    - 使用 Qwen3.5 AI 模型进行智能分析
+    - 使用选定的 AI 模型进行智能分析
     - 提取关键词和主题
     - 生成详细报告
     """
-    # 构建分析提示
-    browse_summary = "\n".join([
-        f"- {item.get('title', '无标题')} ({item.get('url', '')})"
-        for item in request.browse_history[:20]  # 限制前 20 条
-    ])
-    
-    keywords_context = ""
-    if request.keywords:
-        keywords_context = f"\n用户关注的关键词：{', '.join(request.keywords)}\n请重点关注这些相关内容。"
-    
-    prompt = f"""
-请分析以下网页浏览记录，提供详细的分析报告：
-
-浏览记录：
-{browse_summary}
-{keywords_context}
-
-请按以下 JSON 格式返回分析结果：
-{{
-    "summary": "简短总结（100 字以内）",
-    "keywords": ["关键词 1", "关键词 2", "关键词 3"],
-    "detailed_report": "详细分析报告（支持 HTML 格式）",
-    "categories": {{"技术": 10, "新闻": 5, "娱乐": 3}}
-}}
-
-详细报告应包含：
-1. 内容分布分析
-2. 时间分配情况
-3. 兴趣领域识别
-4. 个性化建议
-"""
-
     try:
-        # 调用 AI API
-        ai_response = await call_qwen_api(prompt, request.api_key, request.api_endpoint)
+        await model_manager.initialize_model(
+            request.model_id, 
+            request.api_key,
+            request.api_endpoint if request.api_endpoint != "https://dashscope.aliyuncs.com/api/v1" else None
+        )
         
-        # 解析 AI 响应（尝试提取 JSON）
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', ai_response)
-        if json_match:
-            result = json.loads(json_match.group())
-        else:
-            # 如果无法解析 JSON，使用默认结构
-            result = {
-                "summary": ai_response[:200],
-                "keywords": request.keywords[:5] if request.keywords else ["浏览分析"],
-                "detailed_report": f"<p>{ai_response}</p>",
-                "categories": {"其他": len(request.browse_history)}
-            }
+        result = await model_manager.analyze_browse_history(
+            request.model_id,
+            request.browse_history[:30],
+            request.keywords,
+            model_name=request.model_name
+        )
         
         return AnalysisResponse(
             summary=result.get("summary", "分析完成"),
             keywords=result.get("keywords", []),
             detailed_report=result.get("detailed_report", ""),
             categories=result.get("categories", {}),
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
+            model_used=f"{request.model_id}/{request.model_name or 'default'}"
         )
         
-    except HTTPException:
-        raise
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="AI 响应解析失败")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"分析失败：{str(e)}")
 
@@ -241,11 +227,26 @@ async def generate_podcast(request: PodcastRequest):
     生成语音播客
     - 基于分析结果生成播客文稿
     - 支持多种 TTS 引擎
+    - 支持独立 AI 模型配置
     """
     analysis = request.analysis_result
     
-    # 生成播客文稿
-    script = f"""欢迎收听您的每日浏览摘要播客。
+    try:
+        script = ""
+        
+        if request.model_id and request.api_key:
+            await model_manager.initialize_model(
+                request.model_id,
+                request.api_key
+            )
+            
+            script = await model_manager.generate_podcast_script(
+                request.model_id,
+                analysis,
+                model_name=request.model_name
+            )
+        else:
+            script = f"""欢迎收听您的每日浏览摘要播客。
 
 {analysis.get('summary', '今天您的浏览内容丰富多彩。')}
 
@@ -254,19 +255,19 @@ async def generate_podcast(request: PodcastRequest):
 
 感谢您的收听，祝您有愉快的一天！
 """
-    
-    # 模拟音频生成（实际应调用 TTS API）
-    # 这里返回文稿，前端可以使用 Web Speech API 或调用 TTS 服务
-    
-    duration_minutes = len(script.split()) // 150  # 估算时长
-    duration_seconds = (len(script.split()) % 150) // 30
-    
-    return PodcastResponse(
-        script=script,
-        duration=f"{duration_minutes}分{duration_seconds}秒",
-        status="success",
-        audio_url=None  # 前端使用 TTS 引擎播放
-    )
+        
+        duration_minutes = len(script.split()) // 150
+        duration_seconds = (len(script.split()) % 150) // 30
+        
+        return PodcastResponse(
+            script=script,
+            duration=f"{duration_minutes}分{duration_seconds}秒",
+            status="success",
+            audio_url=None
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"播客生成失败：{str(e)}")
 
 @app.post("/api/verify-api-key")
 async def verify_api_key(request: APIKeyRequest):
