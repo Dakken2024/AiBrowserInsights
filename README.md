@@ -1,6 +1,7 @@
-# Browser Insights - 智能浏览分析扩展
+# Browser Insights - 智能浏览分析扩展 
 
 一个功能完整的 Edge/Chrome 浏览器扩展程序，使用 AI 技术分析您的浏览习惯，生成智能报告和语音播客。
+持续使用AI Coding完善，介意勿看！
 
 ## 🎯 核心功能
 
