@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Insights - 设置</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 100%;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 32px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e5e5e7;
+    }
+    .section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #d1d1d6;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .form-help {
+      font-size: 12px;
+      color: #86868b;
+      margin-top: 6px;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary {
+      background: #f5f5f7;
+      color: #1a1a1a;
+    }
+    .btn-secondary:hover {
+      background: #e8e8ed;
+    }
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34c759;
+    }
+    .status-dot.inactive {
+      background: #ff3b30;
+    }
+    .keyword-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .keyword-item {
+      background: #f5f5f7;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .keyword-remove {
+      cursor: pointer;
+      color: #86868b;
+      font-weight: bold;
+    }
+    .keyword-remove:hover {
+      color: #ff3b30;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1a1a1a;
+      color: white;
+      padding: 14px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1>⚙️ Browser Insights 设置</h1>
+    
+    <div class="section">
+      <div class="section-title">🔑 API 配置</div>
+      
+      <div class="form-group">
+        <label class="form-label">Qwen3.5 API 密钥</label>
+        <input type="password" class="form-input" v-model="settings.apiKey" placeholder="sk-xxxxxxxxxxxxxxxx">
+        <div class="api-status" v-if="settings.apiKey">
+          <div class="status-dot"></div>
+          <span style="color: #34c759;">已配置</span>
+        </div>
+        <div class="api-status" v-else>
+          <div class="status-dot inactive"></div>
+          <span style="color: #86868b;">未配置</span>
+        </div>
+        <div class="form-help">用于 AI 内容分析，从阿里云 DashScope 获取</div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">API 端点</label>
+        <input type="text" class="form-input" v-model="settings.apiEndpoint" placeholder="https://dashscope.aliyuncs.com/api/v1">
+        <div class="form-help">默认使用阿里云 DashScope 服务</div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">TTS API 密钥 (可选)</label>
+        <input type="password" class="form-input" v-model="settings.ttsApiKey" placeholder="用于 Azure/ElevenLabs 等">
+        <div class="form-help">如使用默认 TTS Edge 可留空</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">🎯 关注关键词</div>
+      <div class="form-group">
+        <label class="form-label">添加关键词</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <input type="text" class="form-input" v-model="newKeyword" @keyup.enter="addKeyword" placeholder="输入关键词后按回车" style="flex: 1;">
+          <button class="btn btn-primary" @click="addKeyword">添加</button>
+        </div>
+        <div class="keyword-list" v-if="settings.keywords && settings.keywords.length > 0">
+          <div class="keyword-item" v-for="(kw, i) in settings.keywords" :key="i">
+            {{ kw }}
+            <span class="keyword-remove" @click="removeKeyword(i)">✕</span>
+          </div>
+        </div>
+        <div class="form-help" v-else>暂无关键词，AI 分析时会重点关注这些内容</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">🎙️ 语音设置</div>
+      
+      <div class="form-group">
+        <label class="form-label">默认 TTS 引擎</label>
+        <select class="form-select" v-model="settings.defaultTTS">
+          <option value="tts-edge">Microsoft TTS Edge (免费，推荐)</option>
+          <option value="azure-neural">Azure Neural TTS</option>
+          <option value="elevenlabs">ElevenLabs</option>
+          <option value="openai-tts">OpenAI TTS</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">默认语音</label>
+        <select class="form-select" v-model="settings.defaultVoice">
+          <option value="zh-CN-Yunxi">云希 (男声)</option>
+          <option value="zh-CN-Xiaoxiao">晓晓 (女声)</option>
+          <option value="zh-CN-Yunjian">云健 (男声)</option>
+          <option value="zh-CN-Xiaoyi">晓伊 (女声)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📅 数据管理</div>
+      
+      <div class="form-group">
+        <label class="form-label">数据保留天数</label>
+        <select class="form-select" v-model="settings.dataRetention">
+          <option value="7">7 天</option>
+          <option value="14">14 天</option>
+          <option value="30">30 天 (默认)</option>
+          <option value="90">90 天</option>
+          <option value="unlimited">永久</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">自动分析</label>
+        <select class="form-select" v-model="settings.autoAnalyze">
+          <option :value="false">手动分析</option>
+          <option :value="true">启用自动分析 (每 30 分钟)</option>
+        </select>
+      </div>
+      
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary" @click="clearData">🗑️ 清除所有数据</button>
+        <button class="btn btn-secondary" @click="exportData">📤 导出数据</button>
+      </div>
+    </div>
+    
+    <button class="btn btn-primary" @click="saveSettings" style="width: 100%;">💾 保存设置</button>
+  </div>
+  
+  <div class="toast" :class="{ show: showToast }">{{ toastMessage }}</div>
+  
+  <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.js"></script>
+  <script>
+    const { createApp } = Vue;
+    
+    createApp({
+      data() {
+        return {
+          settings: {
+            apiKey: '',
+            apiEndpoint: 'https://dashscope.aliyuncs.com/api/v1',
+            ttsApiKey: '',
+            keywords: [],
+            defaultTTS: 'tts-edge',
+            defaultVoice: 'zh-CN-Yunxi',
+            dataRetention: '30',
+            autoAnalyze: false,
+            notificationsEnabled: true
+          },
+          newKeyword: '',
+          showToast: false,
+          toastMessage: ''
+        };
+      },
+      methods: {
+        async loadSettings() {
+          const data = await chrome.storage.local.get(['settings']);
+          if (data.settings) {
+            this.settings = data.settings;
+          }
+        },
+        addKeyword() {
+          if (this.newKeyword.trim() && !this.settings.keywords.includes(this.newKeyword.trim())) {
+            this.settings.keywords.push(this.newKeyword.trim());
+            this.newKeyword = '';
+            this.showToastMessage('关键词已添加');
+          }
+        },
+        removeKeyword(index) {
+          this.settings.keywords.splice(index, 1);
+          this.showToastMessage('关键词已删除');
+        },
+        async saveSettings() {
+          await chrome.storage.local.set({ settings: this.settings });
+          this.showToastMessage('设置已保存');
+        },
+        async clearData() {
+          if (confirm('确定清除所有数据？')) {
+            await chrome.storage.local.set({ browseHistory: [] });
+            this.showToastMessage('数据已清除');
+          }
+        },
+        async exportData() {
+          const data = await chrome.storage.local.get(['browseHistory', 'analysisHistory', 'settings']);
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'browser-insights-data.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          this.showToastMessage('数据已导出');
+        },
+        showToastMessage(message) {
+          this.toastMessage = message;
+          this.showToast = true;
+          setTimeout(() => this.showToast = false, 3000);
+        }
+      },
+      mounted() {
+        this.loadSettings();
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

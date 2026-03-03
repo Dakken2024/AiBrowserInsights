@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Insights - 智能浏览分析",
+  "version": "1.0.2",
+  "description": "基于 AI 的网页浏览分析插件，自动生成播客和报告",
+  "icons": {
+    "16": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    },
+    "default_title": "Browser Insights - 点击打开"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": [
+    "history",
+    "tabs",
+    "storage",
+    "activeTab",
+    "notifications",
+    "alarms",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "http://localhost:8001/*",
+    "https://dashscope.aliyuncs.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "options_page": "options.html"
+}

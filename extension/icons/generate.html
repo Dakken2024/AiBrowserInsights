@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Icon Generator</title>
+</head>
+<body>
+  <h1>图标生成器</h1>
+  <p>右键点击画布保存图标</p>
+  <canvas id="canvas" width="128" height="128"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 渐变背景
+    const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    ctx.fillStyle = gradient;
+    
+    // 圆角矩形
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 128, 128, 24);
+    ctx.fill();
+    
+    // 耳机图标
+    ctx.font = '64px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'white';
+    ctx.fillText('🎧', 64, 64);
+    
+    // 自动下载
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.download = 'icon.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>生成图标</title>
+</head>
+<body>
+  <h2>正在生成图标...</h2>
+  <p>请右键点击下面的画布保存为 icon.png</p>
+  <canvas id="canvas128" width="128" height="128" style="border:1px solid #ccc;margin:10px;"></canvas>
+  <canvas id="canvas48" width="48" height="48" style="border:1px solid #ccc;margin:10px;"></canvas>
+  <canvas id="canvas16" width="16" height="16" style="border:1px solid #ccc;margin:10px;"></canvas>
+  
+  <div>
+    <button onclick="downloadIcon()">下载 icon.png (128x128)</button>
+  </div>
+
+  <script>
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      
+      // 渐变背景
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      
+      // 圆角矩形
+      const radius = size * 0.1875; // 24/128
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // 耳机 emoji
+      ctx.font = `${size * 0.5}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'white';
+      ctx.fillText('🎧', size / 2, size / 2);
+    }
+    
+    function downloadIcon() {
+      const canvas = document.getElementById('canvas128');
+      const link = document.createElement('a');
+      link.download = 'icon.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    
+    // 绘制所有尺寸
+    drawIcon(document.getElementById('canvas128'), 128);
+    drawIcon(document.getElementById('canvas48'), 48);
+    drawIcon(document.getElementById('canvas16'), 16);
+    
+    // 自动下载
+    setTimeout(() => {
+      const canvas = document.getElementById('canvas128');
+      const link = document.createElement('a');
+      link.download = 'icon.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      alert('图标已下载！请将 icon.png 放到 icons 文件夹中');
+    }, 1000);
+  </script>
+</body>
+</html>

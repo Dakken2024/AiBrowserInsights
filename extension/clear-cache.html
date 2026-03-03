@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>清除缓存并刷新</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      text-align: center;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      background: #764ba2;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔄 清除扩展缓存</h1>
+  <p>点击下面的按钮清除缓存并刷新扩展</p>
+  
+  <button onclick="clearCache()">清除缓存并刷新</button>
+  <button onclick="reloadExtension()">仅刷新扩展</button>
+  
+  <div id="status" class="status"></div>
+  
+  <hr style="margin: 30px 0;">
+  
+  <h3>手动步骤:</h3>
+  <ol style="text-align: left; max-width: 500px; margin: 0 auto;">
+    <li>按 <strong>Ctrl + Shift + R</strong> 强制刷新</li>
+    <li>或访问 <code>edge://extensions/</code> 点击刷新按钮</li>
+    <li>或清除浏览器缓存 (Ctrl + Shift + Delete)</li>
+  </ol>
+  
+  <script>
+    function clearCache() {
+      // 清除所有缓存
+      caches.keys().then(function(names) {
+        for (let name of names) caches.delete(name);
+      });
+      
+      // 清除 Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      
+      // 显示成功消息
+      const status = document.getElementById('status');
+      status.textContent = '✅ 缓存已清除！请关闭并重新打开 popup (点击扩展图标)';
+      status.className = 'status success';
+      status.style.display = 'block';
+      
+      // 5 秒后刷新
+      setTimeout(() => {
+        location.reload();
+      }, 5000);
+    }
+    
+    function reloadExtension() {
+      // 尝试重新加载扩展
+      chrome.runtime.reload();
+      
+      const status = document.getElementById('status');
+      status.textContent = '🔄 扩展正在重新加载...';
+      status.className = 'status success';
+      status.style.display = 'block';
+    }
+    
+    // 自动清除缓存
+    window.addEventListener('load', () => {
+      // 添加时间戳防止缓存
+      if (!localStorage.getItem('cacheCleared')) {
+        localStorage.setItem('cacheCleared', 'true');
+        location.reload(true);
+      }
+    });
+  </script>
+</body>
+</html>
